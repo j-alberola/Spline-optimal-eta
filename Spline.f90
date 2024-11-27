@@ -46,24 +46,39 @@ real*8, intent(in) :: M(num_points, 5)
 real*8:: eta_inter
 real*8, intent(out) :: M_coeff(4, 2)
 integer, intent(in) :: num_points
-real*8 :: t
-integer :: i
+real*8 :: t(11)
+integer :: i,j,z
 
 
 !Just to have a value for the interpolation between the two points
-eta_inter = (M(1,1) + M(2,1))/2.d0
+!eta_inter = (M(1,1) + M(2,1))/2.d0
+!eta_inter = M(2,1)
 
-
-t = (eta_inter - M(1,1)) / (M(2,1)-M(1,1))
-
-! In a mtrix the terms of the polynomial for both the real and the imaginary part are stored
-do i = 1,2
-       M_coeff(1,i) = (2.d0*t**3.d0 - 3.d0*t**2.d0 + 1.d0) * M(1,i+1)
-       M_coeff(2,i) = (t**3.d0 - 2.d0*t**2.d0 + t) * M(1,i+3)
-       M_coeff(3,i) = (-2.d0*t**3.d0 + 3.d0*t**2.d0) * M(2,i+1)
-       M_coeff(4,i) = (t**3.d0 - t**2.d0) * M(2,i+3)
+do i = 0,10
+       eta_inter = M(1,1)*((10.d0-i)/10.d0) + M(2,1)*(i/10.d0)
+       t(i+1) = (eta_inter - M(1,1)) / (M(2,1)-M(1,1))
 end do
 
+! In a mtrix the terms of the polynomial for both the real and the imaginary part are stored
+
+
+do z = 1, num_points-1
+       do j = 1,11
+              eta_inter = M(z,1)*((10.d0-(j-1))/10.d0) + M(z+1,1)*((j-1)/10.d0)
+              t(i+1) = (eta_inter - M(z,1)) / (M(z+1,1)-M(z,1))
+              do i = 1,2
+                     M_coeff(1,i) = (2.d0*t(j)**3.d0 - 3.d0*t(j)**2.d0 + 1.d0) * M(z,i+1)
+                     M_coeff(2,i) = (t(j)**3.d0 - 2.d0*t(j)**2.d0 + t(j)) * (M(z+1,1)-M(z,1)) * M(z,i+3)
+                     M_coeff(3,i) = (-2.d0*t(j)**3.d0 + 3.d0*t(j)**2.d0) * M(z+1,i+1)
+                     M_coeff(4,i) = (t(j)**3.d0 - t(j)**2.d0) * (M(z+1,1)-M(z,1)) * M(z+1,i+3)
+!                     write (*,*) 'Real part of the two inital points and the interpolated value'
+!                     write (*,*) M(z,2), M(z+1,2), sum(M_coeff(:,1))
+!                     write (*,*) 'Imaginary part of the two inital points and the interpolated value'
+!                     write (*,*) M(z,3), M(z+1,3), sum(M_coeff(:,2))
+              end do                     
+              write (*,*) eta_inter, sum(M_coeff(:,1)), sum(M_coeff(:,2)) 
+       end do
+end do
 
 end subroutine
 
@@ -91,12 +106,12 @@ call Reading (M,num_points)
 
 call var_change(M,num_points,M_coeff)
 
-write (*,*) 'Real part of the two inital points and the interpolated value'
-write (*,*) M(1,2), M(2,2), sum(M_coeff(:,1))
+!write (*,*) 'Real part of the two inital points and the interpolated value'
+!write (*,*) M(1,2), M(2,2), sum(M_coeff(:,1))
 
 
-write (*,*) 'Imaginary part of the two inital points and the interpolated value'
-write (*,*) M(1,3), M(2,3), sum(M_coeff(:,2))
+!write (*,*) 'Imaginary part of the two inital points and the interpolated value'
+!write (*,*) M(1,3), M(2,3), sum(M_coeff(:,2))
 
 
 

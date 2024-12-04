@@ -103,7 +103,8 @@ do j = 1,np_poly
        poly_imag_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
         
        write (*,*) eta_inter, poly_real, poly_imag, poly_real_deriv, poly_imag_deriv,&
-                   eta_inter*dsqrt(poly_real_deriv**2+poly_imag_deriv**2)
+                   poly_real-eta_inter*poly_real_deriv, poly_imag-eta_inter*poly_imag_deriv
+                   !eta_inter*dsqrt(poly_real_deriv**2+poly_imag_deriv**2)
 end do
 
 end subroutine
@@ -127,7 +128,8 @@ real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
        poly_imag_deriv = interpol_deriv(eta_inter-initial_point,Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
 
        write (*,*) eta_inter, poly_real, poly_imag, poly_real_deriv, poly_imag_deriv,&
-                   eta_inter*dsqrt(poly_real_deriv**2+poly_imag_deriv**2)
+                   poly_real-eta_inter*poly_real_deriv, poly_imag-eta_inter*poly_imag_deriv
+                   !eta_inter*dsqrt(poly_real_deriv**2+poly_imag_deriv**2)
 
 end subroutine
 
@@ -256,9 +258,9 @@ call Reading (M,num_points)
 !       write (*,*) M(i,:)
 !end do
 
-write (6,*) 'Write Polynomial fitting or Minima_find in function of option desired'
+write (6,*) 'Write Polynomial_fitting or Minima_find in function of option desired'
 read(5,*) option
-if (option .eq. 'Polynomial fitting') then
+if (option .eq. 'Polynomial_fitting') then
     call fitting (M,num_points)
 else if (option .eq. 'Minima_find') then
     call minimum_find (M,num_points) 

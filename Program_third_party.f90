@@ -649,6 +649,7 @@ END Module PolynomialRoots   ! ==============================================
 !    CALL CubicRoots(a, z)
 !    WRITE(*,*) " Roots: REAL PART   IMAGINARY PART"
 !    WRITE(*,FMT) (DBLE(z(i)), AIMAG(z(i)), i=1,3)
+
 !
 !  ELSE IF(a(2) /= 0.0) THEN
 !    CALL QuadraticRoots(a, z)

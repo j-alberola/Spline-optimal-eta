@@ -63,11 +63,11 @@ real*8, intent(out) :: poly_coeff(4,2)
 real*8, intent(out) :: poly_coeff_deriv(3,2)
 integer :: i
 
-
+!! NO NEED TO PASS THE WHOLE MATRIX
 do i = 1,2
-
-   Poly_coeff(1,i) = (2.d0*M(z,i+1)+h*M(z,i+3) - 2*M(z+1,i+1) + h * M(z+1,i+3))/h**3
-   Poly_coeff(2,i) = (-3.d0*M(z,i+1)+3.d0*M(z+1,i+1)-2.d0*h*M(z,i+3)-h* M(z+1,i+3))/h**2
+!!REORDE 1 AND 2
+   Poly_coeff(1,i) = (2.d0*M(z,i+1)+h*M(z,i+3)-2.d0*M(z+1,i+1)+h*M(z+1,i+3))/h**3
+   Poly_coeff(2,i) =(-3.d0*M(z,i+1)-2.d0*h*M(z,i+3)+3.d0*M(z+1,i+1)-h*M(z+1,i+3))/h**2
    Poly_coeff(3,i) = M(z,i+3)
    Poly_coeff(4,i) = M(z,i+1)
 
@@ -88,11 +88,11 @@ real*8, intent(in) :: M(num_points,5)
 real*8, intent(in) :: Poly_coeff(4,2), Poly_coeff_deriv (3,2)
 integer, intent(in) :: z, num_points
 real*8 :: eta_inter
-real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
+real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv, poly_real_deriv2, poly_imag_deriv2
 integer :: j, np_poly
 
 
-
+!!DREAL or dp as in the complex CHANGE
 do j = 1,np_poly
        eta_inter = M(z,1)*(REAL(np_poly-1)-REAL(j-1))/(REAL(np_poly-1)) + M(z+1,1)*(REAL(j-1)/(REAL(np_poly-1)))
        
@@ -101,15 +101,29 @@ do j = 1,np_poly
          
        poly_real_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
        poly_imag_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
+
+       poly_real_deriv2 = interpol_deriv2(eta_inter-M(z,1),2.d0*Poly_coeff_deriv(1,1),& 
+                          Poly_coeff_deriv(2,1), eta_inter)
+       poly_imag_deriv2 = interpol_deriv2(eta_inter-M(z,1),2.d0*Poly_coeff_deriv(1,2),& 
+                          Poly_coeff_deriv(2,2), eta_inter)
         
        write (*,*) eta_inter, poly_real, poly_imag, poly_real_deriv, poly_imag_deriv,&
-                   poly_real-eta_inter*poly_real_deriv, poly_imag-eta_inter*poly_imag_deriv
+                   poly_real-eta_inter*poly_real_deriv, poly_imag-eta_inter*poly_imag_deriv,&
+                   eta_inter*dsqrt(poly_real_deriv2**2+poly_imag_deriv2**2)
                    !eta_inter*dsqrt(poly_real_deriv**2+poly_imag_deriv**2)
 end do
 
 end subroutine
 
 
+real*8 function interpol_deriv2 (t, c1, c2, ss) result (poly)
+
+real*8, intent(in) :: c1, c2,ss
+real*8, intent(in) :: t
+
+poly = 2*c1*ss*t**2 + c2*ss**2
+
+end function
 subroutine polynomial_evaluation_minima (point_min,initial_point,Poly_coeff,Poly_coeff_deriv)
 
 real*8, intent(in) :: point_min, initial_point
@@ -132,6 +146,9 @@ real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
                    !eta_inter*dsqrt(poly_real_deriv**2+poly_imag_deriv**2)
 
 end subroutine
+
+
+
 
 
 subroutine fitting (M,num_points)

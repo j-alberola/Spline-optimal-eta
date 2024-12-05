@@ -94,7 +94,7 @@ integer :: j, np_poly
 
 !!DREAL or dp as in the complex CHANGE
 do j = 1,np_poly
-       eta_inter = M(z,1)*(REAL(np_poly-1)-REAL(j-1))/(REAL(np_poly-1)) + M(z+1,1)*(REAL(j-1)/(REAL(np_poly-1)))
+       eta_inter = M(z,1)*(REAL(np_poly-1,8)-REAL(j-1,8))/(REAL(np_poly-1,8)) + M(z+1,1)*(REAL(j-1,8)/(REAL(np_poly-1,8)))
        
        poly_real = interpol(eta_inter-M(z,1),Poly_coeff(1,1), Poly_coeff(2,1), Poly_coeff(3,1), Poly_coeff(4,1))
        poly_imag = interpol(eta_inter-M(z,1),Poly_coeff(1,2), Poly_coeff(2,2), Poly_coeff(3,2), Poly_coeff(4,2)) 

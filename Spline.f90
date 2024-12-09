@@ -290,11 +290,14 @@ poly = coeffs(5)*eta**4.d0+coeffs(4)*eta**3.d0+coeffs(3)*eta**2.d0+coeffs(2)*eta
 
 end subroutine
 
-subroutine evaluation_at_eta_value()
+subroutine evaluation_at_eta_value(M,num_points)
 
 
-real*8, intent(in) ::
-real*8, intent(in) ::
+real*8, intent(in) :: M(num_points,5)
+integer, intent(in) :: num_points
+real*8 :: evaluated_eta, eta_step
+real*8 :: Poly_coeff(4,2), poly_coeff_deriv(3,2)
+integer :: z, segment_saved
 
 
 write(*,*) 'Specify the eta value'
@@ -304,13 +307,28 @@ read(*,*) evaluated_eta
 !
 ! IN CASE YOU WANT TO READ THE FILE CONTAINING INFORMATION FOR N2
 !
-call Reading (M,num_points)
 
 !
 ! CHANGE M TO ONLY PASS  GIVEM_VALUES?
+
+
 !
-call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
-call polynomial_evaluation_minima (point_min,initial_point,Poly_coeff,Poly_coeff_deriv)
+!  ADD A WARNING IN CASE THE VALUE OF EVALUATED_ETA IS OUTSIDE THE INTERVAL OF GIVEN POINTS
+!
+do z = 1, num_points-1
+ 
+if (evaluated_eta .ge. M(z,1) .and. evaluated_eta .le. M(z+1,1)) then
+
+eta_step = M(z+1,1)-M(z,1)
+segment_saved = z
+
+end if
+
+
+end do 
+
+call polynomials_coefficients (M,num_points,eta_step,segment_saved,Poly_coeff,poly_coeff_deriv)
+call polynomial_evaluation_minima (evaluated_eta,M(segment_saved,1),Poly_coeff,Poly_coeff_deriv)
 
 
 
@@ -330,8 +348,13 @@ implicit none
 real*8, allocatable :: M(:,:)
 integer :: num_points
 integer :: i 
-character(len=50) :: option
+character(len=50) :: option, option2
 
+
+
+!
+! ADD ANOTHER OPTION TO INTERPOLATE ANOTHER POLYNOMYAL USING A GIVEN VALUE OF ETA
+!
 
 call Reading (M,num_points)
 
@@ -339,17 +362,23 @@ call Reading (M,num_points)
 !       write (*,*) M(i,:)
 !end do
 
-write (6,*) 'Write Polynomial_fitting or Minima_find in function of option desired'
+write (6,*) 'Write Polynomial_fitting or Minima_find or Neutral_Interpolation in function of option desired'
 read(5,*) option
 if (option .eq. 'Polynomial_fitting') then
     call fitting (M,num_points)
 else if (option .eq. 'Minima_find') then
     call minimum_find (M,num_points) 
+else if (option .eq. 'Neutral_Interpolation') then
+    call evaluation_at_eta_value(M,num_points)
 else 
     write (*,*) 'Bad option chosen, try again'
 end if
 
 
+
+!
+!
+!
 
 
 end program

@@ -8,10 +8,17 @@ implicit none
 integer, parameter ::dp = kind(0.d0)
 
 
+!
+! ADD OTHER FILES FOR POLYNOMYAL :FOR EXAMPLE
+!
+
 contains
 
 !Read the points in file and storing data in a matrix (supossing file contains:
 ! eta_value real_energy imag_ener real_derivatvie imag_deriv
+!
+!
+! MAYBE STORE EACH VARIABLE SEPARETLY IN A VECTOR
 !
 subroutine Reading (M,num_points)
 
@@ -95,7 +102,8 @@ real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv, poly_real_deri
 integer :: j, np_poly
 real*8 :: coeffs(5),poly
 
-
+!!
+!!REAL TRANSFORMATION AT THE END OF OPERAIONS!!!!!
 !!DREAL or dp as in the complex CHANGE
 do j = 1,np_poly
        eta_inter = M(z,1)*(REAL(np_poly-1,8)-REAL(j-1,8))/(REAL(np_poly-1,8)) + M(z+1,1)*(REAL(j-1,8)/(REAL(np_poly-1,8)))
@@ -106,13 +114,16 @@ do j = 1,np_poly
        poly_real_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
        poly_imag_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
 
-       call velocity_deriv_U (eta_inter,Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs,poly)
+!       call velocity_deriv_U (eta_inter,Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs,poly)
 
-       write (*,*) eta_inter,interpol_deriv_U(eta_inter,Poly_coeff(1,1),Poly_coeff(2,1),M(z,1)),&
-                    interpol_deriv_U(eta_inter,Poly_coeff(1,2),Poly_coeff(2,2),M(z,1)),&
-                    eta_inter*SQRT(interpol_deriv_U(eta_inter,Poly_coeff(1,1),Poly_coeff(2,1),M(z,1))**2+&
-                                   interpol_deriv_U(eta_inter,Poly_coeff(1,2),Poly_coeff(2,2),M(z,1))**2),&
-                    poly
+       write (*,*) eta_inter,poly_real,poly_imag,poly_real_deriv,poly_imag_deriv,&
+                   eta_inter*SQRT((poly_real_deriv)**2+(poly_imag_deriv)**2)
+                 
+!       write (*,*) eta_inter,interpol_deriv_U(eta_inter,Poly_coeff(1,1),Poly_coeff(2,1),M(z,1)),&
+!                    interpol_deriv_U(eta_inter,Poly_coeff(1,2),Poly_coeff(2,2),M(z,1)),&
+!                    eta_inter*SQRT(interpol_deriv_U(eta_inter,Poly_coeff(1,1),Poly_coeff(2,1),M(z,1))**2+&
+!                                   interpol_deriv_U(eta_inter,Poly_coeff(1,2),Poly_coeff(2,2),M(z,1))**2),&
+!                    poly
 end do
 
 end subroutine
@@ -129,6 +140,7 @@ real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
 
 
 
+       open (UNIT=20, FILE='Minima.dat')
        eta_inter = point_min
 
        poly_real = interpol(eta_inter-initial_point,Poly_coeff(1,1), Poly_coeff(2,1), Poly_coeff(3,1), Poly_coeff(4,1))
@@ -137,7 +149,8 @@ real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
        poly_real_deriv = interpol_deriv(eta_inter-initial_point,Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
        poly_imag_deriv = interpol_deriv(eta_inter-initial_point,Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
 
-       write (*,*) eta_inter, poly_real, poly_imag, poly_real_deriv, poly_imag_deriv,&
+       write (20,*) eta_inter, poly_real, poly_imag, poly_real_deriv, poly_imag_deriv,&
+                    eta_inter*SQRT(poly_real_deriv**2+poly_imag_deriv**2),&
                    poly_real-eta_inter*poly_real_deriv, poly_imag-eta_inter*poly_imag_deriv
 
 end subroutine
@@ -156,10 +169,12 @@ real*8 :: eta_step
 
 write (6,*) 'Number of points of the polynomyal'
 read (5,*) np_poly
+open (unit=30, file='coeffs')
 do z = 1, num_points-1
        eta_step = M(z+1,1)-M(z,1)
        call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
-
+       write (30,*) 'Coefficients for fragment:', z 
+       write (30,*) Poly_coeff
        call polynomial_evaluation (M,num_points,z,Poly_coeff,poly_coeff_deriv,np_poly)
 end do
 
@@ -180,12 +195,18 @@ integer :: z, i,j
 real*8 :: eta, poly
 
 !
-! VARIABLE USED IN CASE EVALUATING THE DEIVATIVE OF THE VELOCITY AT GIVEN ETA VALUES IS NEEDED
+! VARIABLE USED IN CASE EVALUATING THE DERIVATIVE OF THE VELOCITY AT GIVEN ETA VALUES IS NEEDED
 eta = 1.d0
-
+!!
+!! REMOVE ETA WHEN THE CODE IS DEBUGGED
+!!
 do z = 1, num_points-1
        eta_step = M(z+1,1)-M(z,1)
        call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
+
+!
+!    EVALUATION OF THE DERIVATIVE IN ANOTHER SUBROTUINE
+!
        call velocity_deriv (eta,M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1),&
                           Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2),coeffs,poly)
 
@@ -233,7 +254,7 @@ real*8 function interpol_deriv_U (eta, c1, c2, eta1) result (poly)
 real*8, intent(in) :: c1, c2
 real*8, intent(in) :: eta, eta1
 
-poly = 6.d0*c1*eta**2+(2*c2-6.d0*eta1*c1)*eta
+poly = 6.d0*c1*eta**2+(2.d0*c2-6.d0*eta1*c1)*eta
 
 end function
 
@@ -250,6 +271,8 @@ real*8, intent(in) :: d,e,f
 real*8, intent(out) :: coeffs(5)
 real*8, intent(out) :: poly
 
+
+! PUT COEFFS ! IN THE BEGGINING
 coeffs(5) = 3.d0*a**2+3.d0*d**2
 coeffs(4) = 5.d0*a*b+5.d0*d*e-10.d0*a**2*eta1-10.d0*d**2*eta1
 coeffs(3) = 2.d0*b**2+4.d0*a*c+2.d0*e**2+4.d0*d*f-12.d0*a*b*eta1-&
@@ -261,7 +284,7 @@ coeffs(1) = c**2+f**2-2.d0*b*c*eta1-2.d0*e*f*eta1+b**2*eta1**2+&
          2.d0*a*c*eta1**2+e**2*eta1**2+2.d0*d*f*eta1**2-2.d0*a*b*eta1**3-&
          2.d0*d*e*eta1**3+a**2*eta1**4+d**2*eta1**4
 
-
+! REMOVE WHEN NOT NEEDED IN THE DEFNITIVE VERSION
 poly = coeffs(5)*eta**4+coeffs(4)*eta**3+coeffs(3)*eta**2+coeffs(2)*eta+coeffs(1)
 
 end subroutine
@@ -335,11 +358,13 @@ if (evaluated_eta .ge. M(z,1) .and. evaluated_eta .le. M(z+1,1)) then
 
 eta_step = M(z+1,1)-M(z,1)
 segment_saved = z
-
+exit 
 end if
 
 
 end do
+
+
 
 call polynomials_coefficients (M,num_points,eta_step,segment_saved,Poly_coeff,poly_coeff_deriv)
 call polynomial_evaluation_minima (evaluated_eta,M(segment_saved,1),Poly_coeff,Poly_coeff_deriv)

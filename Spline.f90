@@ -60,7 +60,7 @@ end do
 end subroutine
 
 !
-! SUBROTUINES TO GENERATE ADDITIONAL POINTS FOR THE POLYNOMYAL
+! SUBROTUINES TO GENERATE COEFFICIENTS FOR THE POLYNOMYAL
 !
 subroutine polynomials_coefficients(M,num_points,h,z,poly_coeff,poly_coeff_deriv)
 
@@ -88,6 +88,10 @@ do i = 1,2
 
 end do
 end subroutine
+
+!
+! SUBROTUINES TO GENERATE ADDITIONAL POINTS FOR THE POLYNOMYAL
+!
 
 subroutine polynomial_evaluation (M,num_points,z,Poly_coeff,Poly_coeff_deriv,np_poly)
 
@@ -134,20 +138,15 @@ do j = 1,np_poly
        poly_real_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
        poly_imag_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
 
-       poly_real_U = poly_real-eta_inter*poly_real_deriv
-       poly_imag_U = poly_imag-eta_inter*poly_imag_deriv
+       poly_real_U = interpol_U(eta_inter, poly_real, poly_real_deriv) 
+       poly_imag_U = interpol_U(eta_inter, poly_imag, poly_imag_deriv)
 !
-!      FINISH CALLING ALREADY DEFINED FUNCTION OR JUST DEFINE ON THE FLY
-!
-       poly_real_deriv_U = 
-       ploy_imag_deriv_U = 
+       poly_real_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,1), Poly_coeff(2,1), M(z,1)) 
+       poly_imag_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,2), Poly_coeff(2,2), M(z,1))
 
-       call velocity_deriv_U (eta_inter,Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs,poly)
-
-       write (*,*) eta_inter,poly_real,poly_imag,poly_real_deriv,poly_imag_deriv,&
-                   eta_inter*SQRT((poly_real_deriv)**2+(poly_imag_deriv)**2)
+       write (*,*) eta_inter,poly_real_U,poly_imag_U,poly_real_deriv_U,poly_imag_deriv_U,&
+                   eta_inter*SQRT((poly_real_deriv_U)**2+(poly_imag_deriv_U)**2)
 end do
-
 end subroutine
 
 
@@ -167,38 +166,58 @@ do z = 1, num_points-1
        call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
        call polynomial_evaluation (M,num_points,z,Poly_coeff,poly_coeff_deriv,np_poly)
 end do
-
 end subroutine
 
-real*8 function interpol (t, c1, c2, c3 ,c4) result (poly)
+subroutine fitting_U (M,num_points)
+
+real*8, intent(in) :: M(num_points, 5)
+integer, intent(in) :: num_points
+real*8 :: Poly_coeff(4,2),Poly_coeff_deriv(3,2)
+integer :: z, np_poly
+real*8 :: eta_step
+
+write (6,*) 'Number of points of the polynomyal'
+read (5,*) np_poly
+open (unit=30, file='coeffs')
+do z = 1, num_points-1
+       eta_step = M(z+1,1)-M(z,1)
+       call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
+       call polynomial_evaluation_U (M,num_points,z,Poly_coeff,poly_coeff_deriv,np_poly)
+end do
+end subroutine
+
+real*8 function interpol (eta, c1, c2, c3 ,c4) result (poly)
 
 real*8, intent(in) :: c1, c2, c3, c4
-real*8, intent(in) :: t
+real*8, intent(in) :: eta
 
-poly = c1*t**3 + c2*t**2 + c3*t + c4
-
+poly = c1*eta**3 + c2*eta **2 + c3*eta + c4
 end function
 
 
-real*8 function interpol_deriv (t, c1, c2, c3) result (poly)
+real*8 function interpol_deriv (eta, c1, c2, c3) result (poly_deriv)
 
 real*8, intent(in) :: c1, c2, c3
-real*8, intent(in) :: t
+real*8, intent(in) :: eta
 
-poly = c1*t**2 + c2*t + c3
-
+poly_deriv = c1*eta**2 + c2*eta + c3
 end function
 
-real*8 function interpol_deriv_U (eta, c1, c2, eta1) result (poly)
+real*8 function interpol_U (eta, poly, poly_deriv) result (poly_U)
+
+real*8, intent(in) :: poly, poly_deriv
+real*8, intent(in) :: eta
+
+poly_U = poly-eta*poly_deriv
+end function
+
+real*8 function interpol_deriv_U (eta, c1, c2, eta1) result (poly_U_deriv)
 
 real*8, intent(in) :: c1, c2
 real*8, intent(in) :: eta, eta1
 
-poly = 6.d0*c1*eta**2+(2.d0*c2-6.d0*eta1*c1)*eta
-
+poly_U_deriv = -(6.d0*c1*eta**2+(2.d0*c2-6.d0*eta1*c1)*eta)
 end function
-
-
 
 
 !
@@ -207,7 +226,7 @@ end function
 
 
 
-
+!
 ! a,b,c and d,e,f are the coefficents of the derivative of the real and the complex polynomial
 !
 subroutine velocity_deriv (eta1,a,b,c,d,e,f,coeffs)
@@ -387,20 +406,25 @@ implicit none
 real*8, allocatable :: M(:,:)
 integer :: num_points
 integer :: i
-character(len=50) :: option, option2
+integer :: option2
+character(len=50) :: option
 
-
-
-!
-! ADD ANOTHER OPTION TO INTERPOLATE ANOTHER POLYNOMYAL USING A GIVEN VALUE OF ETA
-!
 
 call Reading (M,num_points)
+
 
 write (6,*) 'Write Polynomial_fitting or Minima_find or Neutral_Interpolation in function of option desired'
 read(5,*) option
 if (option .eq. 'Polynomial_fitting') then
-    call fitting (M,num_points)
+    write (6,*) 'Write 0 or 1 in function if the value searched corresponds to th 0th or 1st order energy'
+    read(5,*) option2
+    if (option2 .eq. 0) then
+       call fitting (M,num_points)
+    else if (option2 .eq. 1) then
+       call fitting_U (M,num_points)
+    else
+       write (*,*) 'Bad option, try again'
+    end if
 else if (option .eq. 'Minima_find') then
     call minimum_find (M,num_points)
 else if (option .eq. 'Neutral_Interpolation') then

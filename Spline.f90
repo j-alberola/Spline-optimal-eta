@@ -101,7 +101,6 @@ integer, intent(in) :: z, num_points
 real*8 :: eta_inter
 real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
 integer :: j, np_poly
-real*8 :: coeffs(5),poly
 
 do j = 1,np_poly
        eta_inter = M(z,1)*REAL(np_poly-1-(j-1),8)/(REAL(np_poly-1,8)) + M(z+1,1)*(REAL(j-1,8)/(REAL(np_poly-1,8)))
@@ -127,7 +126,6 @@ real*8 :: eta_inter
 real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
 real*8 :: poly_real_U, poly_imag_U, poly_real_deriv_U, poly_imag_deriv_U
 integer :: j, np_poly
-real*8 :: coeffs(5),poly
 
 do j = 1,np_poly
        eta_inter = M(z,1)*REAL(np_poly-1-(j-1),8)/(REAL(np_poly-1,8)) + M(z+1,1)*(REAL(j-1,8)/(REAL(np_poly-1,8)))
@@ -224,6 +222,73 @@ end function
 !SUBROUTINES USED FOR THE CALCUALTION OF THE MINIMA
 !
 
+subroutine minimum_find (M,num_points)
+
+real*8, intent(in) :: M(num_points, 5)
+integer, intent(in) :: num_points
+complex(dp) :: zeros(4)
+real*8 :: coeffs(5)
+real*8 :: Poly_coeff(4,2),Poly_coeff_deriv(3,2)
+real*8 :: eta_step
+real*8 :: minimum, initial_point
+integer :: z, i
+
+
+do z = 1, num_points-1
+       eta_step = M(z+1,1)-M(z,1)
+       call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
+
+       call velocity_deriv (M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1),&
+                          Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2),coeffs)
+
+!       call velocity_deriv_U (1.d0,Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs,poly)
+ 
+        call QuarticRoots(Coeffs,zeros)
+       do i =1,4
+          if (AIMAG(zeros(i)) .eq. 0.d0 .and. DBLE(zeros(i)) .gt. M(z,1) .and. DBLE(zeros(i)) .lt. M(z+1,1)) then
+!             WRITe (*,*) " MINIMA FOUND"
+             minimum = DBLE(zeros(i))
+             if (velocity_deriv2(coeffs,DBLE(zeros(i))) .gt. 0.d0) then
+                initial_point = M(z,1)
+                call polynomial_evaluation_minima (minimum,initial_point,Poly_coeff,poly_coeff_deriv)
+             end if
+          end if
+       end do
+end do
+end subroutine
+
+subroutine minimum_find_U (M,num_points)
+
+real*8, intent(in) :: M(num_points, 5)
+integer, intent(in) :: num_points
+complex(dp) :: zeros(4)
+real*8 :: coeffs(5)
+real*8 :: Poly_coeff(4,2),Poly_coeff_deriv(3,2)
+real*8 :: eta_step
+real*8 :: minimum, initial_point
+integer :: z, i
+
+
+do z = 1, num_points-1
+       eta_step = M(z+1,1)-M(z,1)
+       call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
+
+
+       call velocity_deriv_U (Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs)
+
+       call QuarticRoots(Coeffs,zeros)
+       do i =1,4
+          if (AIMAG(zeros(i)) .eq. 0.d0 .and. DBLE(zeros(i)) .gt. M(z,1) .and. DBLE(zeros(i)) .lt. M(z+1,1)) then
+             minimum = DBLE(zeros(i))
+             if (velocity_deriv2_U(coeffs,DBLE(zeros(i))) .gt. 0.d0) then
+                initial_point = M(z,1)
+                call polynomial_evaluation_minima (minimum,initial_point,Poly_coeff,poly_coeff_deriv)
+             end if
+          end if
+       end do
+
+end do
+end subroutine
 
 
 !
@@ -249,85 +314,45 @@ coeffs(3) = 2.d0*b**2+4.d0*a*c+2.d0*e**2+4.d0*d*f-12.d0*a*b*eta1-&
          12.d0*d*e*eta1+12.d0*a**2*eta1**2+12.d0*d**2*eta1**2
 coeffs(4) = 5.d0*a*b+5.d0*d*e-10.d0*a**2*eta1-10.d0*d**2*eta1
 coeffs(5) = 3.d0*a**2+3.d0*d**2
+
+!poly = coeffs(5)*eta**4 + coeffs(4)*eta**3 + coeffs(3)*eta**2 + coeffs(2) * eta + coeffs(1)
 end subroutine
 
 real*8 function velocity_deriv2 (coeffs, eta) result (res)
-!EVALUATION OF THE 2nd DERIVATIVE OF THE VELOCITY OF TH 0th ORDER ENERGY
+!EVALUATION OF THE 2nd DERIVATIVE OF THE VELOCITY OF TH 1st ORDER ENERGY
 real*8, intent(in) :: coeffs(5), eta
 
 res = 4.d0*coeffs(5)*eta**3+3.d0*coeffs(4)*eta**2+2.d0*coeffs(3)*eta+coeffs(2)
-
 end function
 
 !!
 !! REVISE THIS SUBROUTINE I WROTE 2+ AND IT SHOULD BE 2*
 !!
-subroutine velocity_deriv_U (eta,a,b,c,d,eta_1,coeffs,poly)
+subroutine velocity_deriv_U (a,b,c,d,eta_1,coeffs)
 !COEFFICIENTS FOR THE DERIVATIVE OF THE VELOCITY OF TH 1st ORDER ENERGY
-real*8, intent(in) :: eta, a, b, c, d, eta_1
-real*8, intent(out) :: coeffs(5), poly
+real*8, intent(in) :: a, b, c, d, eta_1
+real*8, intent(out) :: coeffs(5)
 
 ! Compute the terms step by step
 coeffs (:) = 0.d0
 
-coeffs(3) = 2.0D0 * (2.0D0 * b - 6.0D0 * a * eta_1) + b * (2.0D0 * b - 6.0D0 * a * eta_1) - 6.0D0 * a * eta_1 *&
-        (2.0D0 * b - 6.0D0*a * eta_1) + &
-    (2.0D0 * b - 6.0D0 * a * eta_1)**2 + 2.0D0 * (2.0D0 * d - 6.0D0 * c * eta_1) + d * (2.0D0 * d - 6.0D0 * c * eta_1) - &
-    6.0D0 * c * eta_1 * (2.0D0 * d - 6.0D0 * c * eta_1) + (2.0D0 * d - 6.0D0 * c * eta_1)**2
-coeffs(4) = 12.0D0 * a + 6.0D0 * a * b + 12.0D0 * c + 6.0D0 * c * d - 36.0D0 * a**2 * eta_1 - 36.0D0 * c**2 * eta_1 + &
-    24.0D0 * a * (2.0D0 * b - 6.0D0 * a * eta_1) + 24.0D0 * c * (2.0D0 * d - 6.0D0 * c * eta_1)
+coeffs(3) = 2.0D0 * b * (2.0D0 * b - 6.0D0 * a * eta_1) - 6.0D0 * a * eta_1 *(2.0D0 * b - 6.0D0*a * eta_1) + &
+           (2.0D0 * b - 6.0D0 * a * eta_1)**2 + 2.0D0 * d * (2.0D0 * d - 6.0D0 * c * eta_1) -&
+            6.0D0 * c * eta_1 * (2.0D0 * d - 6.0D0 * c * eta_1) + (2.0D0 * d - 6.0D0 * c * eta_1)**2
+coeffs(4) = 12.0D0 * a * b + 12.0D0 * c * d - 36.0D0 * a**2 * eta_1 - 36.0D0 * c**2 * eta_1 + &
+            24.0D0 * a * (2.0D0 * b - 6.0D0 * a * eta_1) + 24.0D0 * c * (2.0D0 * d - 6.0D0 * c * eta_1)
 coeffs(5) = (108.0D0 * a**2 + 108.0D0 * c**2)
 
 ! Final result
-poly = coeffs(5)*eta**4 + coeffs(4)*eta**3 + coeffs(3)*eta**2
-
-!print *, "The result is:", result
-
-
+!poly = coeffs(5)*eta**4 + coeffs(4)*eta**3 + coeffs(3)*eta**2
 end subroutine
 
+real*8 function velocity_deriv2_U (coeffs, eta) result (res)
+!EVALUATION OF THE 2nd DERIVATIVE OF THE VELOCITY OF THE 1st ORDER ENERGY
+real*8, intent(in) :: coeffs(5), eta
 
-subroutine minimum_find (M,num_points)
-
-
-real*8, intent(in) :: M(num_points, 5)
-integer, intent(in) :: num_points
-complex(dp) :: zeros(4)
-real*8 :: coeffs(5)
-real*8 :: Poly_coeff(4,2),Poly_coeff_deriv(3,2)
-real*8 :: eta_step
-real*8 :: minimum, initial_point
-integer :: z, i,j
-real*8 :: eta, poly
-
-!
-do z = 1, num_points-1
-       eta_step = M(z+1,1)-M(z,1)
-       call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
-
-!
-!    EVALUATION OF THE DERIVATIVE IN ANOTHER SUBROTUINE
-       call velocity_deriv (M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1),&
-                          Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2),coeffs)
-
-!       call velocity_deriv_U (1.d0,Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs,poly)
- 
-        call QuarticRoots(Coeffs,zeros)
-!       write (*,*) zeros
-       do i =1,4
-          if (AIMAG(zeros(i)) .eq. 0.d0 .and. DBLE(zeros(i)) .gt. M(z,1) .and. DBLE(zeros(i)) .lt. M(z+1,1)) then
-!             WRITe (*,*) " MINIMA FOUND"
-             minimum = DBLE(zeros(i))
-             if (velocity_deriv2(coeffs,DBLE(zeros(i))) .gt. 0.d0) then
-                initial_point = M(z,1)
-                call polynomial_evaluation_minima (minimum,initial_point,Poly_coeff,poly_coeff_deriv)
-             end if
-          end if
-       end do
-
-end do
-
-end subroutine
+res = 4.d0*coeffs(5)*eta**3+3.d0*coeffs(4)*eta**2+2.d0*coeffs(3)*eta
+end function
 
 subroutine polynomial_evaluation_minima (eta_inter,initial_point,Poly_coeff,Poly_coeff_deriv)
 
@@ -405,7 +430,6 @@ implicit none
 
 real*8, allocatable :: M(:,:)
 integer :: num_points
-integer :: i
 integer :: option2
 character(len=50) :: option
 
@@ -426,7 +450,15 @@ if (option .eq. 'Polynomial_fitting') then
        write (*,*) 'Bad option, try again'
     end if
 else if (option .eq. 'Minima_find') then
-    call minimum_find (M,num_points)
+    write (6,*) 'Write 0 or 1 in function if the value searched corresponds to th 0th or 1st order energy'
+    read(5,*) option2
+    if (option2 .eq. 0) then    
+       call minimum_find (M,num_points)
+    else if (option2 .eq. 1) then
+       call minimum_find_U (M,num_points)
+    else
+       write (*,*) 'Bad option, try again'
+    end if
 else if (option .eq. 'Neutral_Interpolation') then
     call evaluation_at_eta_value(M,num_points)
 else

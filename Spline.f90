@@ -8,9 +8,6 @@ implicit none
 integer, parameter ::dp = kind(0.d0)
 
 
-!
-! ADD OTHER FILES FOR POLYNOMYAL :FOR EXAMPLE
-!
 
 contains
 
@@ -24,7 +21,7 @@ subroutine Reading (M,num_points)
 
 real*8, allocatable, intent(out) :: M (:,:)
 integer, intent(out) :: num_points
-integer :: i, ios
+integer :: i, ios, stat
 character(len=1000) :: file_name
 character(len=1) :: foo
 
@@ -32,7 +29,11 @@ character(len=1) :: foo
 write (6,*) 'Insert file name'
 read(5,*) file_name
 
-open (UNIT=10, FILE=file_name)
+open (UNIT=10, FILE=file_name,ACTION='read',IOSTAT=stat,STATUS='OLD')
+if (stat .ne. 0) then
+        write (*,*) 'File not found. Introduce a valid name'
+        stop
+end if 
 
 num_points = 0
 do
@@ -74,7 +75,8 @@ integer :: i
 
 !! NO NEED TO PASS THE WHOLE MATRIX
 
-!!!CHECK MATRIX THING
+!!!CHECK MATRIX THING. MAYBE CHANGE THE STORAGE OF THE INITIAL VALUES. INSTEAD 
+! OF A MATRIX USE DIFERENT VECTORS
 do i = 1,2
 !!REORDE 1 AND 2
    Poly_coeff(1,i) = (2.d0*M(z,i+1)+h*M(z,i+3)-2.d0*M(z+1,i+1)+h*M(z+1,i+3))/h**3
@@ -90,59 +92,62 @@ end do
 end subroutine
 
 !
-! SUBROTUINES TO GENERATE ADDITIONAL POINTS FOR THE POLYNOMYAL
+! SUBROUTINES TO GENERATE ADDITIONAL POINTS (EQUALLY SPACED) FOR THE POLYNOMYAL
 !
 
-subroutine polynomial_evaluation (M,num_points,z,Poly_coeff,Poly_coeff_deriv,np_poly)
+subroutine polynomial_evaluation (M1,M2,num_points,Poly_coeff,Poly_coeff_deriv,np_poly)
 
-real*8, intent(in) :: M(num_points,5)
+real*8, intent(in) :: M1, M2
 real*8, intent(in) :: Poly_coeff(4,2), Poly_coeff_deriv (3,2)
-integer, intent(in) :: z, num_points
+integer, intent(in) :: num_points
 real*8 :: eta_inter
 real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
 integer :: j, np_poly
 
+
+
 do j = 1,np_poly
-       eta_inter = M(z,1)*REAL(np_poly-1-(j-1),8)/(REAL(np_poly-1,8)) + M(z+1,1)*(REAL(j-1,8)/(REAL(np_poly-1,8)))
+       eta_inter = M1*REAL(np_poly-j,8)/(REAL(np_poly-1,8)) + M2*(REAL(j-1,8)/(REAL(np_poly-1,8)))
 
-       poly_real = interpol(eta_inter-M(z,1),Poly_coeff(1,1), Poly_coeff(2,1), Poly_coeff(3,1), Poly_coeff(4,1))
-       poly_imag = interpol(eta_inter-M(z,1),Poly_coeff(1,2), Poly_coeff(2,2), Poly_coeff(3,2), Poly_coeff(4,2))
+       poly_real = interpol(eta_inter-M1,Poly_coeff(1,1), Poly_coeff(2,1), Poly_coeff(3,1), Poly_coeff(4,1))
+       poly_imag = interpol(eta_inter-M1,Poly_coeff(1,2), Poly_coeff(2,2), Poly_coeff(3,2), Poly_coeff(4,2))
 
-       poly_real_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
-       poly_imag_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
+       poly_real_deriv = interpol_deriv(eta_inter-M1,Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
+       poly_imag_deriv = interpol_deriv(eta_inter-M1,Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
 
 
-       write (*,*) eta_inter,poly_real,poly_imag,poly_real_deriv,poly_imag_deriv,&
+       write (30,*) eta_inter,poly_real,poly_imag,poly_real_deriv,poly_imag_deriv,&
                    eta_inter*SQRT((poly_real_deriv)**2+(poly_imag_deriv)**2)
 end do
 end subroutine
 
-subroutine polynomial_evaluation_U (M,num_points,z,Poly_coeff,Poly_coeff_deriv,np_poly)
+subroutine polynomial_evaluation_U (M1,M2,num_points,Poly_coeff,Poly_coeff_deriv,np_poly)
 
-real*8, intent(in) :: M(num_points,5)
+real*8, intent(in) :: M1, M2
 real*8, intent(in) :: Poly_coeff(4,2), Poly_coeff_deriv (3,2)
-integer, intent(in) :: z, num_points
+integer, intent(in) :: num_points
 real*8 :: eta_inter
 real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
 real*8 :: poly_real_U, poly_imag_U, poly_real_deriv_U, poly_imag_deriv_U
 integer :: j, np_poly
 
+
 do j = 1,np_poly
-       eta_inter = M(z,1)*REAL(np_poly-1-(j-1),8)/(REAL(np_poly-1,8)) + M(z+1,1)*(REAL(j-1,8)/(REAL(np_poly-1,8)))
+       eta_inter = M1*REAL(np_poly-j,8)/(REAL(np_poly-1,8)) + M2*(REAL(j-1,8)/(REAL(np_poly-1,8)))
 
-       poly_real = interpol(eta_inter-M(z,1),Poly_coeff(1,1), Poly_coeff(2,1), Poly_coeff(3,1), Poly_coeff(4,1))
-       poly_imag = interpol(eta_inter-M(z,1),Poly_coeff(1,2), Poly_coeff(2,2), Poly_coeff(3,2), Poly_coeff(4,2))
+       poly_real = interpol(eta_inter-M1,Poly_coeff(1,1), Poly_coeff(2,1), Poly_coeff(3,1), Poly_coeff(4,1))
+       poly_imag = interpol(eta_inter-M1,Poly_coeff(1,2), Poly_coeff(2,2), Poly_coeff(3,2), Poly_coeff(4,2))
 
-       poly_real_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
-       poly_imag_deriv = interpol_deriv(eta_inter-M(z,1),Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
+       poly_real_deriv = interpol_deriv(eta_inter-M1,Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
+       poly_imag_deriv = interpol_deriv(eta_inter-M1,Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
 
        poly_real_U = interpol_U(eta_inter, poly_real, poly_real_deriv) 
        poly_imag_U = interpol_U(eta_inter, poly_imag, poly_imag_deriv)
 !
-       poly_real_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,1), Poly_coeff(2,1), M(z,1)) 
-       poly_imag_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,2), Poly_coeff(2,2), M(z,1))
+       poly_real_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,1), Poly_coeff(2,1), M1) 
+       poly_imag_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,2), Poly_coeff(2,2), M1)
 
-       write (*,*) eta_inter,poly_real_U,poly_imag_U,poly_real_deriv_U,poly_imag_deriv_U,&
+       write (30,*) eta_inter,poly_real_U,poly_imag_U,poly_real_deriv_U,poly_imag_deriv_U,&
                    eta_inter*SQRT((poly_real_deriv_U)**2+(poly_imag_deriv_U)**2)
 end do
 end subroutine
@@ -158,11 +163,11 @@ real*8 :: eta_step
 
 write (6,*) 'Number of points of the polynomyal'
 read (5,*) np_poly
-open (unit=30, file='coeffs')
+open (unit=30, file='Polynomial_points')
 do z = 1, num_points-1
        eta_step = M(z+1,1)-M(z,1)
        call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
-       call polynomial_evaluation (M,num_points,z,Poly_coeff,poly_coeff_deriv,np_poly)
+       call polynomial_evaluation (M(z,1),M(z+1,1),num_points,Poly_coeff,poly_coeff_deriv,np_poly)
 end do
 end subroutine
 
@@ -176,11 +181,11 @@ real*8 :: eta_step
 
 write (6,*) 'Number of points of the polynomyal'
 read (5,*) np_poly
-open (unit=30, file='coeffs')
+open (unit=30, file='Polynomial_points')
 do z = 1, num_points-1
        eta_step = M(z+1,1)-M(z,1)
        call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
-       call polynomial_evaluation_U (M,num_points,z,Poly_coeff,poly_coeff_deriv,np_poly)
+       call polynomial_evaluation_U (M(z,1),M(z+1,1),num_points,Poly_coeff,poly_coeff_deriv,np_poly)
 end do
 end subroutine
 
@@ -237,16 +242,11 @@ integer :: z, i
 do z = 1, num_points-1
        eta_step = M(z+1,1)-M(z,1)
        call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
-
        call velocity_deriv (M(z,1),Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1),&
-                          Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2),coeffs)
-
-!       call velocity_deriv_U (1.d0,Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs,poly)
- 
-        call QuarticRoots(Coeffs,zeros)
+                            Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2),coeffs)
+       call QuarticRoots(Coeffs,zeros)
        do i =1,4
           if (AIMAG(zeros(i)) .eq. 0.d0 .and. DBLE(zeros(i)) .gt. M(z,1) .and. DBLE(zeros(i)) .lt. M(z+1,1)) then
-!             WRITe (*,*) " MINIMA FOUND"
              minimum = DBLE(zeros(i))
              if (velocity_deriv2(coeffs,DBLE(zeros(i))) .gt. 0.d0) then
                 initial_point = M(z,1)
@@ -272,21 +272,17 @@ integer :: z, i
 do z = 1, num_points-1
        eta_step = M(z+1,1)-M(z,1)
        call polynomials_coefficients (M,num_points,eta_step,z,Poly_coeff,poly_coeff_deriv)
-
-
        call velocity_deriv_U (Poly_coeff(1,1),Poly_coeff(2,1),Poly_coeff(1,2),Poly_coeff(2,2),M(z,1),coeffs)
-
        call QuarticRoots(Coeffs,zeros)
        do i =1,4
           if (AIMAG(zeros(i)) .eq. 0.d0 .and. DBLE(zeros(i)) .gt. M(z,1) .and. DBLE(zeros(i)) .lt. M(z+1,1)) then
              minimum = DBLE(zeros(i))
              if (velocity_deriv2_U(coeffs,DBLE(zeros(i))) .gt. 0.d0) then
                 initial_point = M(z,1)
-                call polynomial_evaluation_minima (minimum,initial_point,Poly_coeff,poly_coeff_deriv)
+                call polynomial_evaluation_minima_U (minimum,initial_point,Poly_coeff,poly_coeff_deriv)
              end if
           end if
        end do
-
 end do
 end subroutine
 
@@ -375,6 +371,32 @@ real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
 
 end subroutine
 
+subroutine polynomial_evaluation_minima_U (eta_inter,initial_point,Poly_coeff,Poly_coeff_deriv)
+
+real*8, intent(in) :: eta_inter, initial_point
+real*8, intent(in) :: Poly_coeff(4,2), Poly_coeff_deriv (3,2)
+real*8 :: poly_real, poly_imag, poly_real_deriv, poly_imag_deriv
+real*8 :: poly_real_U, poly_imag_U, poly_real_deriv_U, poly_imag_deriv_U
+
+       open (UNIT=20, FILE='Minima.dat')
+
+       poly_real = interpol(eta_inter-initial_point,Poly_coeff(1,1), Poly_coeff(2,1), Poly_coeff(3,1), Poly_coeff(4,1))
+       poly_imag = interpol(eta_inter-initial_point,Poly_coeff(1,2), Poly_coeff(2,2), Poly_coeff(3,2), Poly_coeff(4,2))
+
+       poly_real_deriv = interpol_deriv(eta_inter-initial_point,Poly_coeff_deriv(1,1), Poly_coeff_deriv(2,1), Poly_coeff_deriv(3,1))
+       poly_imag_deriv = interpol_deriv(eta_inter-initial_point,Poly_coeff_deriv(1,2), Poly_coeff_deriv(2,2), Poly_coeff_deriv(3,2))
+
+       poly_real_U = interpol_U(eta_inter, poly_real, poly_real_deriv) 
+       poly_imag_U = interpol_U(eta_inter, poly_imag, poly_imag_deriv)
+!
+       poly_real_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,1), Poly_coeff(2,1), initial_point) 
+       poly_imag_deriv_U = interpol_deriv_U(eta_inter, Poly_coeff(1,2), Poly_coeff(2,2), initial_point)
+
+       write (20,*) eta_inter,poly_real_U,poly_imag_U,poly_real_deriv_U,poly_imag_deriv_U,&
+                   eta_inter*SQRT((poly_real_deriv_U)**2+(poly_imag_deriv_U)**2)
+
+end subroutine
+
 
 
 subroutine evaluation_at_eta_value(M,num_points)
@@ -396,10 +418,6 @@ read(*,*) evaluated_eta
 !
 
 !
-! CHANGE M TO ONLY PASS  GIVEM_VALUES?
-
-
-!
 !  ADD A WARNING IN CASE THE VALUE OF EVALUATED_ETA IS OUTSIDE THE INTERVAL OF GIVEN POINTS
 !
 do z = 1, num_points-1
@@ -412,14 +430,13 @@ end do
 
 call polynomials_coefficients (M,num_points,eta_step,segment_saved,Poly_coeff,poly_coeff_deriv)
 call polynomial_evaluation_minima (evaluated_eta,M(segment_saved,1),Poly_coeff,Poly_coeff_deriv)
-
-
-
 end subroutine
-
 
 end module
 
+!
+!
+!
 
 program Spline
 
